@@ -1,58 +1,418 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistem Informasi Pembayaran Uang Sekolah
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Website manajemen pembayaran uang sekolah berbasis Laravel. Aplikasi ini memiliki backend API dan website monolith menggunakan Laravel Blade, Tailwind CSS, Alpine.js, Axios, Laravel Sanctum, dan Midtrans Snap untuk pembayaran.
 
-## About Laravel
+## Ringkasan Teknologi
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Laravel Framework: 13.8.0
+- PHP: ^8.3
+- Database: MySQL atau SQLite, mengikuti konfigurasi `.env`
+- Frontend: Laravel Blade, Tailwind CSS 4, Alpine.js, Axios, Vite
+- Auth web: session-based guard Laravel
+- Auth API: Laravel Sanctum token
+- Payment gateway: Midtrans Snap
+- PDF export: barryvdh/laravel-dompdf
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Fitur Utama
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Auth
 
-## Learning Laravel
+- Login web menggunakan `username` dan `password`
+- Logout session
+- Redirect otomatis ke dashboard sesuai role
+- Role tersedia: `admin`, `guru`, `orang_tua`, `siswa`
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Admin
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Dashboard ringkasan total siswa, guru, tagihan bulan ini, dan pembayaran terkumpul
+- Grafik pembayaran 6 bulan terakhir
+- CRUD kelas
+- CRUD guru
+- CRUD orang tua
+- CRUD siswa
+- CRUD tagihan
+- Assign tagihan ke siswa
+- Detail tagihan dan progress pembayaran siswa
+- Riwayat seluruh pembayaran
+- Laporan pembayaran dengan filter bulan, tahun, kelas
+- Export laporan PDF
+- Notifikasi
+- Profil dan ganti password
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### Guru
 
-## Agentic Development
+- Dashboard pemantauan siswa, kelas, dan status pembayaran
+- Data siswa read-only
+- Detail siswa read-only
+- Data tagihan read-only
+- Detail tagihan dan status pembayaran siswa read-only
+- Notifikasi
+- Profil dan ganti password
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Orang Tua
 
-```bash
-composer require laravel/boost --dev
+- Dashboard tagihan anak
+- Daftar tagihan anak dengan filter anak dan status
+- Halaman bayar tagihan menggunakan Midtrans Snap
+- Riwayat pembayaran anak
+- Notifikasi
+- Profil dan ganti password
 
-php artisan boost:install
+### Siswa
+
+- Dashboard tagihan aktif bulan ini
+- Daftar tagihan siswa
+- Riwayat pembayaran siswa
+- Notifikasi
+- Profil dan ganti password
+
+## Struktur Penting
+
+```text
+app/Http/Controllers/Web
++-- Auth/LoginController.php
++-- Admin/*
++-- Guru/*
++-- OrangTua/*
++-- Siswa/*
++-- Concerns/*
++-- ProfilController.php
+
+resources/views
++-- layouts/app.blade.php
++-- auth/login.blade.php
++-- admin/*
++-- guru/*
++-- orang-tua/*
++-- siswa/*
++-- notifikasi/*
++-- profil/*
++-- components/*
+
+routes
++-- web.php
++-- api.php
+
+database
++-- migrations/*
++-- seeders/*
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Instalasi
 
-## Contributing
+Pastikan sudah tersedia PHP 8.3+, Composer, Node.js, npm, dan database.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+1. Clone atau buka folder project.
 
-## Code of Conduct
+```bash
+cd Proyek_pembayaran_sekolah
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+2. Install dependency PHP.
 
-## Security Vulnerabilities
+```bash
+composer install
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+3. Install dependency frontend.
 
-## License
+```bash
+npm install
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+4. Buat file environment.
+
+```bash
+cp .env.example .env
+```
+
+Di Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+5. Generate app key.
+
+```bash
+php artisan key:generate
+```
+
+6. Atur koneksi database di `.env`.
+
+Contoh MySQL:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=db_pembayaran_sekolah
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+7. Jalankan migration dan seeder.
+
+```bash
+php artisan migrate --seed
+```
+
+Jika database sudah ada dan ingin reset ulang:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+8. Build asset frontend.
+
+```bash
+npm run build
+```
+
+9. Jalankan server.
+
+```bash
+php artisan serve
+```
+
+Buka:
+
+```text
+http://127.0.0.1:8000
+```
+
+Untuk mode development frontend:
+
+```bash
+npm run dev
+```
+
+## Konfigurasi Environment
+
+Konfigurasi penting di `.env`:
+
+```env
+APP_NAME="Sistem Pembayaran Sekolah"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://127.0.0.1:8000
+
+SESSION_DRIVER=database
+QUEUE_CONNECTION=database
+CACHE_STORE=database
+
+MIDTRANS_SERVER_KEY=
+MIDTRANS_CLIENT_KEY=
+MIDTRANS_IS_PRODUCTION=false
+MIDTRANS_IS_SANITIZED=true
+MIDTRANS_IS_3DS=true
+```
+
+Untuk Midtrans sandbox:
+
+- Gunakan `MIDTRANS_IS_PRODUCTION=false`
+- Isi `MIDTRANS_SERVER_KEY` dari dashboard Midtrans sandbox
+- Isi `MIDTRANS_CLIENT_KEY` dari dashboard Midtrans sandbox
+
+## Akun Demo Seeder
+
+Seeder menyediakan akun awal berikut:
+
+| Role | Username | Password |
+| --- | --- | --- |
+| Admin | `admin` | `admin123` |
+| Guru | `guru1` | `guru123` |
+| Orang Tua | `ortu1` | `ortu123` |
+| Siswa | `siswa1` | `siswa123` |
+
+Seeder juga membuat data profil dasar guru, orang tua, siswa, dan kelas.
+
+## Route Web Utama
+
+### Public
+
+- `GET /login`
+- `POST /login`
+- `POST /logout`
+
+### Admin
+
+- `/admin/dashboard`
+- `/admin/kelas`
+- `/admin/guru`
+- `/admin/orang-tua`
+- `/admin/siswa`
+- `/admin/tagihan`
+- `/admin/pembayaran`
+- `/admin/laporan`
+- `/admin/notifikasi`
+- `/admin/profil`
+
+### Guru
+
+- `/guru/dashboard`
+- `/guru/siswa`
+- `/guru/tagihan`
+- `/guru/notifikasi`
+- `/guru/profil`
+
+### Orang Tua
+
+- `/orang-tua/dashboard`
+- `/orang-tua/tagihan`
+- `/orang-tua/tagihan/{tagihanSiswa}/bayar`
+- `/orang-tua/pembayaran`
+- `/orang-tua/notifikasi`
+- `/orang-tua/profil`
+
+### Siswa
+
+- `/siswa/dashboard`
+- `/siswa/tagihan`
+- `/siswa/pembayaran`
+- `/siswa/notifikasi`
+- `/siswa/profil`
+
+## API Singkat
+
+API berada di `routes/api.php` dan memakai Laravel Sanctum.
+
+- `POST /api/login`
+- `POST /api/logout`
+- `GET /api/me`
+- Resource API untuk kelas, guru, orang tua, siswa, dan tagihan
+
+API membutuhkan token Sanctum untuk route protected.
+
+## Alur Pembayaran Midtrans
+
+1. Orang tua membuka `/orang-tua/tagihan`.
+2. Pilih tagihan yang belum lunas.
+3. Klik `Bayar Sekarang`.
+4. Halaman bayar memanggil endpoint:
+
+```text
+POST /orang-tua/tagihan/{tagihanSiswa}/snap-token
+```
+
+5. Server membuat Snap token lewat Midtrans PHP SDK.
+6. Frontend memanggil `window.snap.pay(token)`.
+7. Status awal transaksi disimpan sebagai `pending`.
+
+Catatan: webhook/callback server-to-server Midtrans belum didokumentasikan sebagai endpoint khusus di project ini. Status final pembayaran masih mengikuti data transaksi yang tersimpan dan callback frontend.
+
+## Command Development
+
+Build frontend production:
+
+```bash
+npm run build
+```
+
+Jalankan Vite development:
+
+```bash
+npm run dev
+```
+
+Jalankan test:
+
+```bash
+php artisan test
+```
+
+Compile cache Blade:
+
+```bash
+php artisan view:cache
+```
+
+Lihat route:
+
+```bash
+php artisan route:list
+```
+
+Clear cache umum:
+
+```bash
+php artisan optimize:clear
+```
+
+## Database Utama
+
+Tabel utama:
+
+- `users`
+- `kelas`
+- `gurus`
+- `orang_tuas`
+- `siswas`
+- `tagihans`
+- `tagihan_siswas`
+- `pembayarans`
+- `notifikasis`
+- `sessions`
+
+Relasi penting:
+
+- User memiliki satu profil sesuai role: guru, siswa, atau orang tua
+- Orang tua memiliki banyak siswa
+- Siswa berada di satu kelas
+- Tagihan di-assign ke siswa melalui `tagihan_siswas`
+- Pembayaran terhubung ke satu `tagihan_siswa`
+- Notifikasi terhubung ke user
+
+## Catatan Operasional
+
+- Semua form web menggunakan CSRF protection.
+- Web menggunakan session auth, bukan token.
+- Dashboard dan halaman tiap role dilindungi middleware `auth.web` dan `role`.
+- Badge notifikasi di header melakukan polling unread count setiap 30 detik.
+- File asset publik berada di `public/`, termasuk logo di `public/images/logo.jpeg`.
+- Untuk production, set `APP_DEBUG=false`, isi `APP_URL`, dan gunakan key Midtrans production.
+
+## Troubleshooting
+
+### Login berhasil tetapi masuk dashboard 404
+
+Pastikan user memiliki profil sesuai role. Seeder terbaru sudah membuat profil dasar. Untuk data lama, controller orang tua otomatis membuat profil minimal jika belum ada.
+
+### Midtrans gagal membuat pembayaran
+
+Periksa:
+
+- `MIDTRANS_SERVER_KEY`
+- `MIDTRANS_CLIENT_KEY`
+- `MIDTRANS_IS_PRODUCTION`
+- nominal tagihan harus lebih dari 0
+- koneksi internet server ke Midtrans
+
+Setelah mengubah `.env`, jalankan:
+
+```bash
+php artisan optimize:clear
+```
+
+### Asset tidak berubah
+
+Jalankan ulang:
+
+```bash
+npm run build
+php artisan view:clear
+```
+
+Lalu hard refresh browser.
+
+## Status Verifikasi Terakhir
+
+Perintah yang sudah digunakan untuk verifikasi:
+
+```bash
+php artisan view:cache
+php artisan test
+npm run build
+```
+
+Semua berhasil pada kondisi terakhir pengembangan.
