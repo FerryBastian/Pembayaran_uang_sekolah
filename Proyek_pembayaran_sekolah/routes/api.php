@@ -7,6 +7,8 @@ use App\Http\Controllers\KelasController;
 use App\Http\Controllers\GuruController;
 use App\Http\Controllers\OrangTuaController;
 use App\Http\Controllers\TagihanController;
+use App\Http\Controllers\Api\PembayaranController; // ← ganti ini
+
 
 // ─── Public Routes ───────────────────────────────────────────────
 Route::get('/login', function () {
@@ -18,6 +20,10 @@ Route::get('/login', function () {
 });
 
 Route::post('/login', [AuthController::class, 'login'])->name('api.login');
+
+// ─── Midtrans Callback (PUBLIC - tidak perlu auth) ───────────────
+Route::post('/midtrans/callback', [PembayaranController::class, 'callback']);
+
 
 // ─── Protected Routes ────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
