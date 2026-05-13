@@ -52,6 +52,7 @@ Route::middleware(['auth.web', 'role:admin'])
         Route::get('/laporan/export-pdf', [\App\Http\Controllers\Web\Admin\LaporanController::class, 'exportPdf'])->name('laporan.export-pdf');
 
         Route::get('/notifikasi', [\App\Http\Controllers\Web\Admin\NotifikasiController::class, 'index'])->name('notifikasi.index');
+        Route::get('/notifikasi/count', [\App\Http\Controllers\Web\Admin\NotifikasiController::class, 'count'])->name('notifikasi.count');
         Route::patch('/notifikasi/{notifikasi}/read', [\App\Http\Controllers\Web\Admin\NotifikasiController::class, 'markAsRead'])->name('notifikasi.read');
         Route::patch('/notifikasi/read-all', [\App\Http\Controllers\Web\Admin\NotifikasiController::class, 'markAllAsRead'])->name('notifikasi.read-all');
 
@@ -71,6 +72,7 @@ Route::middleware(['auth.web', 'role:guru'])
         Route::get('/tagihan/{tagihan}', [\App\Http\Controllers\Web\Guru\TagihanController::class, 'show'])->name('tagihan.show');
 
         Route::get('/notifikasi', [\App\Http\Controllers\Web\Guru\NotifikasiController::class, 'index'])->name('notifikasi.index');
+        Route::get('/notifikasi/count', [\App\Http\Controllers\Web\Guru\NotifikasiController::class, 'count'])->name('notifikasi.count');
         Route::patch('/notifikasi/{notifikasi}/read', [\App\Http\Controllers\Web\Guru\NotifikasiController::class, 'markAsRead'])->name('notifikasi.read');
         Route::patch('/notifikasi/read-all', [\App\Http\Controllers\Web\Guru\NotifikasiController::class, 'markAllAsRead'])->name('notifikasi.read-all');
 
@@ -90,6 +92,7 @@ Route::middleware(['auth.web', 'role:orang_tua'])
         Route::get('/pembayaran', [\App\Http\Controllers\Web\OrangTua\PembayaranController::class, 'index'])->name('pembayaran.index');
 
         Route::get('/notifikasi', [\App\Http\Controllers\Web\OrangTua\NotifikasiController::class, 'index'])->name('notifikasi.index');
+        Route::get('/notifikasi/count', [\App\Http\Controllers\Web\OrangTua\NotifikasiController::class, 'count'])->name('notifikasi.count');
         Route::patch('/notifikasi/{notifikasi}/read', [\App\Http\Controllers\Web\OrangTua\NotifikasiController::class, 'markAsRead'])->name('notifikasi.read');
         Route::patch('/notifikasi/read-all', [\App\Http\Controllers\Web\OrangTua\NotifikasiController::class, 'markAllAsRead'])->name('notifikasi.read-all');
 
@@ -107,6 +110,7 @@ Route::middleware(['auth.web', 'role:siswa'])
         Route::get('/pembayaran', [\App\Http\Controllers\Web\Siswa\PembayaranController::class, 'index'])->name('pembayaran.index');
 
         Route::get('/notifikasi', [\App\Http\Controllers\Web\Siswa\NotifikasiController::class, 'index'])->name('notifikasi.index');
+        Route::get('/notifikasi/count', [\App\Http\Controllers\Web\Siswa\NotifikasiController::class, 'count'])->name('notifikasi.count');
         Route::patch('/notifikasi/{notifikasi}/read', [\App\Http\Controllers\Web\Siswa\NotifikasiController::class, 'markAsRead'])->name('notifikasi.read');
         Route::patch('/notifikasi/read-all', [\App\Http\Controllers\Web\Siswa\NotifikasiController::class, 'markAllAsRead'])->name('notifikasi.read-all');
 

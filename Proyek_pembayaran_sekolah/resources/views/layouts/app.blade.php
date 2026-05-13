@@ -68,6 +68,13 @@
         'siswa' => $safeRoute('siswa.notifikasi.index', '/siswa/notifikasi'),
         default => '#',
     };
+    $notificationCountUrl = match ($role) {
+        'admin' => $safeRoute('admin.notifikasi.count', '/admin/notifikasi/count'),
+        'guru' => $safeRoute('guru.notifikasi.count', '/guru/notifikasi/count'),
+        'orang_tua' => $safeRoute('orang-tua.notifikasi.count', '/orang-tua/notifikasi/count'),
+        'siswa' => $safeRoute('siswa.notifikasi.count', '/siswa/notifikasi/count'),
+        default => null,
+    };
     $logoutUrl = Route::has('logout') ? route('logout') : url('/logout');
 @endphp
 
@@ -94,7 +101,26 @@
 </head>
 <body>
     <div
-        x-data="{ sidebarOpen: false, profileOpen: false }"
+        x-data="{
+            sidebarOpen: false,
+            profileOpen: false,
+            notificationCount: {{ (int) $notificationCount }},
+            notificationCountUrl: @js($notificationCountUrl),
+            async refreshNotificationCount() {
+                if (!this.notificationCountUrl || !window.axios) return;
+
+                try {
+                    const response = await window.axios.get(this.notificationCountUrl);
+                    this.notificationCount = Number(response.data.count || 0);
+                } catch (error) {
+                    // Keep the last known count if the polling request fails.
+                }
+            },
+            init() {
+                this.refreshNotificationCount();
+                setInterval(() => this.refreshNotificationCount(), 30000);
+            }
+        }"
         class="min-h-screen bg-background"
     >
         <div
@@ -113,11 +139,7 @@
         >
             <div class="flex h-16 items-center justify-between border-b border-white/10 px-6">
                 <a href="{{ $role ? url('/' . str_replace('_', '-', $role) . '/dashboard') : url('/') }}" class="flex items-center gap-3">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
-                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </span>
+                    <img src="{{ asset('images/logo.jpeg') }}" alt="Logo" class="h-10 w-10 object-contain">
                     <span>
                         <span class="block text-sm font-bold leading-5">Pembayaran</span>
                         <span class="block text-xs font-medium text-blue-100">Uang Sekolah</span>
@@ -260,11 +282,12 @@
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            @if ($notificationCount > 0)
-                                <span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-danger px-1.5 py-0.5 text-center text-[10px] font-bold leading-4 text-white">
-                                    {{ $notificationCount > 99 ? '99+' : $notificationCount }}
-                                </span>
-                            @endif
+                            <span
+                                x-cloak
+                                x-show="notificationCount > 0"
+                                x-text="notificationCount > 99 ? '99+' : notificationCount"
+                                class="absolute -right-1 -top-1 min-w-5 rounded-full bg-danger px-1.5 py-0.5 text-center text-[10px] font-bold leading-4 text-white"
+                            ></span>
                         </a>
 
                         <div class="relative" @keydown.escape.window="profileOpen = false">
