@@ -280,6 +280,7 @@ API berada di `routes/api.php` dan memakai Laravel Sanctum.
 - `POST /api/login`
 - `POST /api/logout`
 - `GET /api/me`
+- `POST /api/midtrans/callback` (public, tidak butuh token)
 - Resource API untuk kelas, guru, orang tua, siswa, dan tagihan
 
 API membutuhkan token Sanctum untuk route protected.
@@ -298,8 +299,86 @@ POST /orang-tua/tagihan/{tagihanSiswa}/snap-token
 5. Server membuat Snap token lewat Midtrans PHP SDK.
 6. Frontend memanggil `window.snap.pay(token)`.
 7. Status awal transaksi disimpan sebagai `pending`.
+8. Midtrans mengirim notifikasi callback ke `POST /api/midtrans/callback`.
+9. Laravel memperbarui status pembayaran menjadi `lunas`, `pending`, atau `gagal`.
 
-Catatan: webhook/callback server-to-server Midtrans belum didokumentasikan sebagai endpoint khusus di project ini. Status final pembayaran masih mengikuti data transaksi yang tersimpan dan callback frontend.
+## Pengaturan ngrok (Untuk Development Lokal)
+
+Midtrans membutuhkan URL publik yang dapat diakses dari internet untuk mengirim notifikasi callback pembayaran. Karena server development berjalan di localhost, diperlukan ngrok untuk mengekspos server ke internet.
+
+### Prasyarat
+
+- Daftar akun gratis di [https://dashboard.ngrok.com/signup](https://dashboard.ngrok.com/signup)
+- Install ngrok
+
+```bash
+npm install -g ngrok
+```
+
+Atau download langsung dari [https://ngrok.com/download](https://ngrok.com/download).
+
+### Langkah Pengaturan
+
+1. Tambahkan authtoken ngrok. Ambil token dari [https://dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken).
+
+```bash
+ngrok config add-authtoken TOKEN_KAMU
+```
+
+2. Jalankan ngrok di terminal terpisah.
+
+```bash
+ngrok http 8000
+```
+
+3. Salin URL forwarding yang muncul, contoh:
+
+```text
+https://xxxx-xxxx.ngrok-free.app
+```
+
+4. Buka dashboard Midtrans sandbox di [https://dashboard.sandbox.midtrans.com/settings/payment/notification](https://dashboard.sandbox.midtrans.com/settings/payment/notification).
+
+5. Isi kolom **URL notifikasi pembayaran** dengan:
+
+```text
+https://xxxx-xxxx.ngrok-free.app/api/midtrans/callback
+```
+
+6. Klik **Simpan**.
+
+### Catatan Penting
+
+- URL ngrok **berubah setiap kali** ngrok dijalankan ulang (pada akun gratis). Perbarui URL di dashboard Midtrans setiap kali menjalankan ulang ngrok.
+- Jalankan tiga proses secara bersamaan saat development: `php artisan serve`, `npm run dev`, dan `ngrok http 8000`.
+- Untuk menghindari update URL manual, pertimbangkan upgrade ke ngrok berbayar yang mendukung domain tetap, atau gunakan Cloudflare Tunnel sebagai alternatif gratis.
+
+### Alternatif: Cloudflare Tunnel
+
+Cloudflare Tunnel memberikan URL yang lebih stabil tanpa perlu akun berbayar.
+
+```bash
+# Install cloudflared di Windows
+winget install --id Cloudflare.cloudflared
+
+# Jalankan tunnel
+cloudflared tunnel --url http://localhost:8000
+```
+
+Salin URL yang diberikan dan gunakan sebagai pengganti URL ngrok di dashboard Midtrans.
+
+### Kartu Test Midtrans Sandbox
+
+Untuk pengujian pembayaran yang langsung berstatus `settlement` (lunas), gunakan metode Credit Card dengan data berikut:
+
+| Field | Nilai |
+| --- | --- |
+| Card Number | `4811 1111 1111 1114` |
+| Expiry | `12/27` |
+| CVV | `123` |
+| OTP | `112233` |
+
+Metode QRIS dan Virtual Account di sandbox mungkin memerlukan trigger manual dari dashboard Midtrans untuk mengubah status menjadi `settlement`.
 
 ## Command Development
 
@@ -393,6 +472,25 @@ Setelah mengubah `.env`, jalankan:
 ```bash
 php artisan optimize:clear
 ```
+
+### Status pembayaran tetap pending setelah bayar
+
+Pastikan:
+
+- ngrok sedang berjalan
+- URL notifikasi di dashboard Midtrans sudah diperbarui dengan URL ngrok terbaru
+- Route `POST /api/midtrans/callback` tidak terbungkus middleware auth
+- Laravel sedang berjalan dan dapat menerima request
+
+Cek log untuk melihat apakah callback masuk:
+
+```powershell
+Get-Content storage/logs/laravel.log -Wait -Tail 20
+```
+
+### ngrok URL berubah
+
+Setiap kali ngrok dijalankan ulang, URL berubah. Perbarui URL di dashboard Midtrans sandbox pada menu **Pengaturan > Payment > URL notifikasi**.
 
 ### Asset tidak berubah
 
