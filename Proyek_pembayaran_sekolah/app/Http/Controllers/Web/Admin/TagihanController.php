@@ -5,18 +5,22 @@ namespace App\Http\Controllers\Web\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tagihan\StoreTagihanRequest;
 use App\Http\Requests\Tagihan\UpdateTagihanRequest;
+use App\Jobs\SendWhatsappPengingat;
+use App\Jobs\SendWhatsappTagihanBaru;
 use App\Models\Siswa;
 use App\Models\Tagihan;
 use App\Models\TagihanSiswa;
 use App\Repositories\TagihanRepository;
+use App\Services\WhatsappService;
 use Exception;
 use Illuminate\Http\Request;
 
 class TagihanController extends Controller
 {
-    public function __construct(private readonly TagihanRepository $tagihanRepository)
-    {
-    }
+    public function __construct(
+        private readonly TagihanRepository $tagihanRepository,
+        private readonly WhatsappService $whatsappService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -38,7 +42,20 @@ class TagihanController extends Controller
 
     public function store(StoreTagihanRequest $request)
     {
-        $this->tagihanRepository->create($request->validated(), $request->user()->id);
+        $tagihan = $this->tagihanRepository->create($request->validated(), $request->user()->id);
+
+        TagihanSiswa::query()
+            ->with(['siswa.orangTua', 'siswa.kelas'])
+            ->where('tagihan_id', $tagihan->id)
+            ->get()
+            ->each(function (TagihanSiswa $tagihanSiswa) use ($tagihan) {
+                $siswa = $tagihanSiswa->siswa;
+                $orangTua = $siswa?->orangTua;
+
+                if ($orangTua && filled($orangTua->no_wa)) {
+                    SendWhatsappTagihanBaru::dispatch($orangTua, $tagihan, $siswa);
+                }
+            });
 
         return redirect()->route('admin.tagihan.index')->with('success', 'Tagihan berhasil dibuat dan di-assign ke semua siswa.');
     }
@@ -99,7 +116,14 @@ class TagihanController extends Controller
         $validated = $request->validate(['siswa_id' => ['required', 'exists:siswas,id']]);
 
         try {
-            $this->tagihanRepository->assignManual($tagihan->id, $validated['siswa_id']);
+            $tagihanSiswa = $this->tagihanRepository->assignManual($tagihan->id, $validated['siswa_id']);
+            $tagihanSiswa->load(['siswa.orangTua', 'siswa.kelas']);
+            $siswa = $tagihanSiswa->siswa;
+            $orangTua = $siswa?->orangTua;
+
+            if ($orangTua && filled($orangTua->no_wa)) {
+                SendWhatsappTagihanBaru::dispatch($orangTua, $tagihan, $siswa);
+            }
 
             return redirect()->route('admin.tagihan.show', $tagihan)->with('success', 'Tagihan berhasil di-assign ke siswa.');
         } catch (Exception $exception) {
@@ -107,14 +131,62 @@ class TagihanController extends Controller
         }
     }
 
-    public function blastWhatsapp(Tagihan $tagihan)
+    public function blastPengingat(Tagihan $tagihan)
     {
-        return redirect()->route('admin.tagihan.show', $tagihan)->with('success', 'Permintaan blast notifikasi WA dicatat.');
+        $jumlahTerkirim = 0;
+
+        TagihanSiswa::query()
+            ->with(['siswa.orangTua', 'tagihan'])
+            ->where('tagihan_id', $tagihan->id)
+            ->where('status', 'belum_bayar')
+            ->get()
+            ->each(function (TagihanSiswa $tagihanSiswa) use (&$jumlahTerkirim) {
+                $orangTua = $tagihanSiswa->siswa?->orangTua;
+
+                if ($orangTua && filled($orangTua->no_wa)) {
+                    SendWhatsappPengingat::dispatch($orangTua, $tagihanSiswa);
+                    $jumlahTerkirim++;
+                }
+            });
+
+        return redirect()
+            ->route('admin.tagihan.show', $tagihan)
+            ->with('success', "Pengingat berhasil dikirim ke {$jumlahTerkirim} orang tua.");
     }
 
     public function sendWhatsapp(TagihanSiswa $tagihanSiswa)
     {
-        return redirect()->route('admin.tagihan.show', $tagihanSiswa->tagihan_id)->with('success', 'Permintaan notifikasi WA dicatat.');
+        $tagihanSiswa->load('siswa.orangTua');
+        $orangTua = $tagihanSiswa->siswa?->orangTua;
+
+        if (! $orangTua || blank($orangTua->no_wa)) {
+            return redirect()
+                ->route('admin.tagihan.show', $tagihanSiswa->tagihan_id)
+                ->with('error', 'Nomor WhatsApp orang tua tidak tersedia.');
+        }
+
+        SendWhatsappPengingat::dispatch($orangTua, $tagihanSiswa);
+
+        return redirect()
+            ->route('admin.tagihan.show', $tagihanSiswa->tagihan_id)
+            ->with('success', 'Pengingat WhatsApp masuk ke antrean pengiriman.');
+    }
+
+    public function testWhatsapp(Request $request)
+    {
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'max:30'],
+        ]);
+
+        if ($this->whatsappService->testKirim($validated['phone'])) {
+            return redirect()
+                ->back()
+                ->with('success', 'Pesan test WhatsApp berhasil dikirim.');
+        }
+
+        return redirect()
+            ->back()
+            ->with('error', 'Pesan test WhatsApp gagal dikirim. Periksa koneksi dan log aplikasi.');
     }
 
     private function months(): array

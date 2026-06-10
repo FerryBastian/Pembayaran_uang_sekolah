@@ -1,0 +1,22 @@
+services:
+  whatsapp_go:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    build:
+      context: .
+      dockerfile: ./docker/golang.Dockerfile
+    restart: "unless-stopped"
+    ports:
+      - "127.0.0.1:3000:8111"
+    env_file:
+      - src/.env
+    volumes:
+      - whatsapp:/app/storages
+
+volumes:
+  whatsapp:
+    external: true
+    name: go-whatsapp-web-multidevice_whatsapp

@@ -8,7 +8,7 @@ use App\Models\Pembayaran;
 use Illuminate\Http\Request;
 
 class PembayaranController extends Controller
-{
+{   
     use ResolvesParentProfile;
 
     public function index(Request $request)

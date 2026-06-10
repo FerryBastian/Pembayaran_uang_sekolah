@@ -43,8 +43,9 @@ Route::middleware(['auth.web', 'role:admin'])
         Route::resource('tagihan', \App\Http\Controllers\Web\Admin\TagihanController::class);
         Route::get('/tagihan/{tagihan}/assign', [\App\Http\Controllers\Web\Admin\TagihanController::class, 'assign'])->name('tagihan.assign');
         Route::post('/tagihan/{tagihan}/assign', [\App\Http\Controllers\Web\Admin\TagihanController::class, 'storeAssign'])->name('tagihan.assign.store');
-        Route::post('/tagihan/{tagihan}/notifikasi/blast', [\App\Http\Controllers\Web\Admin\TagihanController::class, 'blastWhatsapp'])->name('tagihan.notifikasi.blast');
+        Route::post('/tagihan/{tagihan}/blast-pengingat', [\App\Http\Controllers\Web\Admin\TagihanController::class, 'blastPengingat'])->name('tagihan.notifikasi.blast');
         Route::post('/tagihan-siswa/{tagihanSiswa}/notifikasi', [\App\Http\Controllers\Web\Admin\TagihanController::class, 'sendWhatsapp'])->name('tagihan-siswa.notifikasi.send');
+        Route::get('/wa/test', [\App\Http\Controllers\Web\Admin\TagihanController::class, 'testWhatsapp'])->name('wa.test');
 
         Route::get('/pembayaran', [\App\Http\Controllers\Web\Admin\PembayaranController::class, 'index'])->name('pembayaran.index');
 

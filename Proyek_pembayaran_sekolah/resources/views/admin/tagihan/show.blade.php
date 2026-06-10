@@ -20,7 +20,7 @@
             <x-slot:actions>
                 <form method="POST" action="{{ route('admin.tagihan.notifikasi.blast', $tagihan) }}">
                     @csrf
-                    <button class="rounded-xl bg-success px-4 py-2.5 text-sm font-bold text-white hover:bg-green-700">Blast WA</button>
+                    <button class="rounded-xl bg-success px-4 py-2.5 text-sm font-bold text-white hover:bg-green-700">Kirim Pengingat WA</button>
                 </form>
             </x-slot:actions>
             <div class="grid gap-4 md:grid-cols-4">

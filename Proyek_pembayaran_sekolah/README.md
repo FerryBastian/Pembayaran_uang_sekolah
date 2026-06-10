@@ -206,6 +206,12 @@ MIDTRANS_CLIENT_KEY=
 MIDTRANS_IS_PRODUCTION=false
 MIDTRANS_IS_SANITIZED=true
 MIDTRANS_IS_3DS=true
+
+GOWA_API_URL=http://127.0.0.1:3000
+GOWA_USERNAME=your_gowa_username
+GOWA_PASSWORD=your_strong_gowa_password
+GOWA_DEVICE_ID=
+GOWA_TIMEOUT=15
 ```
 
 Untuk Midtrans sandbox:
@@ -213,6 +219,39 @@ Untuk Midtrans sandbox:
 - Gunakan `MIDTRANS_IS_PRODUCTION=false`
 - Isi `MIDTRANS_SERVER_KEY` dari dashboard Midtrans sandbox
 - Isi `MIDTRANS_CLIENT_KEY` dari dashboard Midtrans sandbox
+
+Nilai `GOWA_USERNAME` dan `GOWA_PASSWORD` harus sama dengan salah satu akun pada
+`APP_BASIC_AUTH` di service GOWA. `GOWA_DEVICE_ID` boleh dikosongkan jika hanya
+ada satu perangkat WhatsApp yang terdaftar.
+
+## Notifikasi WhatsApp GOWA
+
+GOWA berjalan sebagai service terpisah dari Laravel. Laravel mengirim pesan ke:
+
+```text
+POST {GOWA_API_URL}/send/message
+```
+
+Notifikasi WhatsApp dikirim melalui queue untuk:
+
+- tagihan baru setelah tagihan di-assign ke siswa
+- pembayaran yang berubah menjadi `lunas`
+- pengingat manual untuk tagihan berstatus `belum_bayar`
+
+Jalankan queue worker bersama server Laravel:
+
+```bash
+php artisan queue:work --tries=3 --timeout=60 --sleep=3
+```
+
+Route admin yang tersedia:
+
+- `POST /admin/tagihan/{tagihan}/blast-pengingat`
+- `POST /admin/tagihan-siswa/{tagihanSiswa}/notifikasi`
+- `GET /admin/wa/test?phone=628xxxxxxxx`
+
+Pesan yang berhasil dikirim juga disimpan ke tabel `notifikasis`. Periksa
+`storage/logs/laravel.log` dan `php artisan queue:failed` jika pengiriman gagal.
 
 ## Akun Demo Seeder
 
@@ -514,3 +553,55 @@ npm run build
 ```
 
 Semua berhasil pada kondisi terakhir pengembangan.
+
+## Checklist Deployment
+
+Gunakan `.env.production.example` sebagai acuan dan jangan deploy file `.env`
+lokal. Nilai berikut wajib diganti:
+
+- `APP_URL`, `APP_KEY`, dan koneksi database
+- key Midtrans production
+- akun Basic Auth GOWA yang kuat
+- `GOWA_API_URL` yang dapat dijangkau server Laravel
+
+Jika GOWA berjalan pada server yang sama, `http://127.0.0.1:3000` dapat
+digunakan. Jika berbeda server, gunakan jaringan privat atau HTTPS dan jangan
+membuka GOWA ke internet tanpa autentikasi.
+
+Sebelum pertama kali menjalankan compose GOWA, buat volume persisten:
+
+```bash
+docker volume create go-whatsapp-web-multidevice_whatsapp
+docker compose up -d
+```
+
+Volume tersebut menyimpan database sesi WhatsApp. Jangan menghapus volume saat
+update container karena perangkat harus login ulang jika database sesi hilang.
+
+Perintah deployment Laravel:
+
+```bash
+composer install --no-dev --optimize-autoloader
+npm ci
+npm run build
+php artisan migrate --force
+php artisan storage:link
+php artisan optimize
+php artisan queue:restart
+```
+
+Queue worker harus dijalankan permanen melalui Supervisor, systemd, atau process
+manager hosting:
+
+```bash
+php artisan queue:work --tries=3 --timeout=60 --sleep=3
+```
+
+Atur URL notifikasi Midtrans production ke:
+
+```text
+https://your-domain.example/api/midtrans/callback
+```
+
+Callback memverifikasi `signature_key`, nominal transaksi, dan mencegah status
+`lunas` diturunkan oleh callback terlambat.
