@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\ResolvesParentProfile;
 use App\Models\Pembayaran;
 use App\Models\TagihanSiswa;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -43,7 +44,7 @@ class TagihanController extends Controller
         ]);
     }
 
-    public function uploadBukti(Request $request, TagihanSiswa $tagihanSiswa)
+    public function uploadBukti(Request $request, TagihanSiswa $tagihanSiswa, NotificationService $notificationService)
     {
         $this->authorizeParentAccess($request, $tagihanSiswa);
         $tagihanSiswa->load(['tagihan', 'siswa', 'pembayaran']);
@@ -83,6 +84,20 @@ class TagihanController extends Controller
         );
 
         $tagihanSiswa->update(['status' => 'pending']);
+
+        $tagihanSiswa->loadMissing(['tagihan', 'siswa.kelas']);
+
+        $notificationService->sendToAdmins(
+            'Bukti Pembayaran Baru',
+            sprintf(
+                '%s mengupload bukti pembayaran untuk tagihan %s atas nama %s kelas %s sebesar Rp %s. Silakan periksa di halaman pembayaran.',
+                $request->user()->name,
+                $tagihanSiswa->tagihan?->judul ?? '-',
+                $tagihanSiswa->siswa?->nama ?? '-',
+                $tagihanSiswa->siswa?->kelas?->nama_kelas ?? '-',
+                number_format($grossAmount, 0, ',', '.')
+            )
+        );
 
         return redirect()
             ->route('orang-tua.tagihan.index')

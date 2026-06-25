@@ -26,7 +26,7 @@
         .signature { margin-top: 64px; margin-left: auto; width: 240px; text-align: center; }
         .signature-place { margin-bottom: 6px; }
         .signature-space { height: 58px; }
-        .signature-name { border-bottom: 1px solid #0f172a; font-weight: 700; padding-bottom: 2px; }
+        .signature-name { font-weight: 700; padding-bottom: 2px; }
         .signature-role { margin-top: 3px; }
     </style>
 </head>
@@ -101,7 +101,7 @@
         <div>Admin</div>
         <div class="signature-space"></div>
         <div class="signature-name">{{ $printedBy?->name ?? 'Admin' }}</div>
-        <div class="signature-role">Pengelola Sistem Pembayaran</div>
+        <!-- <div class="signature-role">Pengelola Sistem Pembayaran</div> -->
     </div>
 </body>
 </html>

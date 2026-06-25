@@ -11,6 +11,7 @@ use App\Models\Siswa;
 use App\Models\Tagihan;
 use App\Models\TagihanSiswa;
 use App\Repositories\TagihanRepository;
+use App\Services\NotificationService;
 use App\Services\WhatsappService;
 use Exception;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class TagihanController extends Controller
     public function __construct(
         private readonly TagihanRepository $tagihanRepository,
         private readonly WhatsappService $whatsappService,
+        private readonly NotificationService $notificationService,
     ) {}
 
     public function index(Request $request)
@@ -51,6 +53,12 @@ class TagihanController extends Controller
             ->each(function (TagihanSiswa $tagihanSiswa) use ($tagihan) {
                 $siswa = $tagihanSiswa->siswa;
                 $orangTua = $siswa?->orangTua;
+
+                $this->notificationService->sendToUser(
+                    $orangTua?->user_id,
+                    'Tagihan Baru',
+                    $this->tagihanBaruMessage($tagihanSiswa)
+                );
 
                 if ($orangTua && filled($orangTua->no_wa)) {
                     SendWhatsappTagihanBaru::dispatch($orangTua, $tagihan, $siswa);
@@ -121,6 +129,12 @@ class TagihanController extends Controller
             $siswa = $tagihanSiswa->siswa;
             $orangTua = $siswa?->orangTua;
 
+            $this->notificationService->sendToUser(
+                $orangTua?->user_id,
+                'Tagihan Baru',
+                $this->tagihanBaruMessage($tagihanSiswa)
+            );
+
             if ($orangTua && filled($orangTua->no_wa)) {
                 SendWhatsappTagihanBaru::dispatch($orangTua, $tagihan, $siswa);
             }
@@ -142,6 +156,12 @@ class TagihanController extends Controller
             ->get()
             ->each(function (TagihanSiswa $tagihanSiswa) use (&$jumlahTerkirim) {
                 $orangTua = $tagihanSiswa->siswa?->orangTua;
+
+                $this->notificationService->sendToUser(
+                    $orangTua?->user_id,
+                    'Pengingat Tagihan',
+                    $this->pengingatTagihanMessage($tagihanSiswa)
+                );
 
                 if ($orangTua && filled($orangTua->no_wa)) {
                     SendWhatsappPengingat::dispatch($orangTua, $tagihanSiswa);
@@ -166,6 +186,12 @@ class TagihanController extends Controller
         }
 
         SendWhatsappPengingat::dispatch($orangTua, $tagihanSiswa);
+
+        $this->notificationService->sendToUser(
+            $orangTua->user_id,
+            'Pengingat Tagihan',
+            $this->pengingatTagihanMessage($tagihanSiswa)
+        );
 
         return redirect()
             ->route('admin.tagihan.show', $tagihanSiswa->tagihan_id)
@@ -196,5 +222,40 @@ class TagihanController extends Controller
             5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
             9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
         ];
+    }
+
+    private function tagihanBaruMessage(TagihanSiswa $tagihanSiswa): string
+    {
+        $tagihanSiswa->loadMissing(['tagihan', 'siswa.kelas']);
+        $tagihan = $tagihanSiswa->tagihan;
+        $siswa = $tagihanSiswa->siswa;
+        $bulan = $tagihan ? ($this->months()[(int) $tagihan->bulan] ?? $tagihan->bulan) : '-';
+
+        return sprintf(
+            'Tagihan baru %s untuk %s (%s) kelas %s sebesar Rp %s periode %s %s. Jatuh tempo %s.',
+            $tagihan?->judul ?? '-',
+            $siswa?->nama ?? '-',
+            $siswa?->nisn ?? '-',
+            $siswa?->kelas?->nama_kelas ?? '-',
+            number_format((float) ($tagihan?->nominal ?? 0), 0, ',', '.'),
+            $bulan,
+            $tagihan?->tahun ?? '-',
+            $tagihanSiswa->jatuh_tempo?->format('d/m/Y') ?? '-'
+        );
+    }
+
+    private function pengingatTagihanMessage(TagihanSiswa $tagihanSiswa): string
+    {
+        $tagihanSiswa->loadMissing(['tagihan', 'siswa.kelas']);
+        $tagihan = $tagihanSiswa->tagihan;
+        $siswa = $tagihanSiswa->siswa;
+
+        return sprintf(
+            'Pengingat pembayaran %s untuk %s kelas %s sebesar Rp %s. Status masih belum dibayar.',
+            $tagihan?->judul ?? '-',
+            $siswa?->nama ?? '-',
+            $siswa?->kelas?->nama_kelas ?? '-',
+            number_format((float) ($tagihan?->nominal ?? 0), 0, ',', '.')
+        );
     }
 }

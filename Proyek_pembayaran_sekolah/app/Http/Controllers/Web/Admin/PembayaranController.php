@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendWhatsappPembayaranBerhasil;
 use App\Models\Pembayaran;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -46,7 +47,7 @@ class PembayaranController extends Controller
         return $this->streamBuktiPembayaran($pembayaran);
     }
 
-    public function verify(Request $request, Pembayaran $pembayaran)
+    public function verify(Request $request, Pembayaran $pembayaran, NotificationService $notificationService)
     {
         $pembayaran->load('tagihanSiswa.siswa.orangTua');
 
@@ -66,6 +67,12 @@ class PembayaranController extends Controller
 
         $orangTua = $tagihanSiswa?->siswa?->orangTua;
 
+        $notificationService->sendToUser(
+            $orangTua?->user_id,
+            'Pembayaran Dikonfirmasi',
+            $this->paymentConfirmationMessage($pembayaran, 'Pembayaran Anda sudah diverifikasi dan tagihan dinyatakan lunas.')
+        );
+
         if ($orangTua && filled($orangTua->no_wa)) {
             SendWhatsappPembayaranBerhasil::dispatch($orangTua, $tagihanSiswa);
         }
@@ -73,7 +80,7 @@ class PembayaranController extends Controller
         return back()->with('success', 'Pembayaran berhasil ditandai lunas.');
     }
 
-    public function reject(Request $request, Pembayaran $pembayaran)
+    public function reject(Request $request, Pembayaran $pembayaran, NotificationService $notificationService)
     {
         $validated = $request->validate([
             'catatan_verifikasi' => ['nullable', 'string', 'max:500'],
@@ -94,6 +101,14 @@ class PembayaranController extends Controller
 
         $pembayaran->tagihanSiswa?->update(['status' => 'belum_bayar']);
 
+        $pembayaran->loadMissing('tagihanSiswa.siswa.orangTua');
+
+        $notificationService->sendToUser(
+            $pembayaran->tagihanSiswa?->siswa?->orangTua?->user_id,
+            'Bukti Pembayaran Ditolak',
+            $this->paymentConfirmationMessage($pembayaran, $pembayaran->catatan_verifikasi)
+        );
+
         return back()->with('success', 'Pembayaran ditolak. Orang tua dapat upload bukti pembayaran ulang.');
     }
 
@@ -105,5 +120,21 @@ class PembayaranController extends Controller
         abort_unless(Storage::disk($disk)->exists($path), 404);
 
         return response()->file(Storage::disk($disk)->path($path));
+    }
+
+    private function paymentConfirmationMessage(Pembayaran $pembayaran, string $statusMessage): string
+    {
+        $pembayaran->loadMissing(['tagihanSiswa.tagihan', 'tagihanSiswa.siswa.kelas']);
+        $tagihanSiswa = $pembayaran->tagihanSiswa;
+
+        return sprintf(
+            '%s Tagihan %s untuk %s kelas %s sebesar Rp %s. Order ID: %s.',
+            $statusMessage,
+            $tagihanSiswa?->tagihan?->judul ?? '-',
+            $tagihanSiswa?->siswa?->nama ?? '-',
+            $tagihanSiswa?->siswa?->kelas?->nama_kelas ?? '-',
+            number_format((float) $pembayaran->gross_amount, 0, ',', '.'),
+            $pembayaran->order_id
+        );
     }
 }

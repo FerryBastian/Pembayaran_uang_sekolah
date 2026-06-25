@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Notifikasi;
 use App\Models\OrangTua;
 use App\Models\Siswa;
 use App\Models\Tagihan;
@@ -118,7 +117,7 @@ class WhatsappService
             config('app.name'),
         ]);
 
-        $this->sendAndStoreNotification($orangTua, $tagihan->judul, $message);
+        $this->sendWhatsappNotification($orangTua, $message);
     }
 
     public function sendPembayaranBerhasil(OrangTua $orangTua, TagihanSiswa $tagihanSiswa): void
@@ -153,7 +152,7 @@ class WhatsappService
             config('app.name'),
         ]);
 
-        $this->sendAndStoreNotification($orangTua, 'Pembayaran Berhasil', $message);
+        $this->sendWhatsappNotification($orangTua, $message);
     }
 
     public function sendPengingatTagihan(OrangTua $orangTua, TagihanSiswa $tagihanSiswa): void
@@ -181,7 +180,7 @@ class WhatsappService
             config('app.name'),
         ]);
 
-        $this->sendAndStoreNotification($orangTua, 'Pengingat Tagihan', $message);
+        $this->sendWhatsappNotification($orangTua, $message);
     }
 
     public function testKirim(string $noHp): bool
@@ -189,18 +188,11 @@ class WhatsappService
         return $this->sendMessage($noHp, 'Test koneksi WhatsApp berhasil ✅');
     }
 
-    private function sendAndStoreNotification(OrangTua $orangTua, string $judul, string $message): void
+    private function sendWhatsappNotification(OrangTua $orangTua, string $message): void
     {
         if (! $this->sendMessage((string) $orangTua->no_wa, $message)) {
             throw new \RuntimeException("Gagal mengirim WhatsApp ke orang tua ID {$orangTua->id}.");
         }
-
-        Notifikasi::create([
-            'user_id' => $orangTua->user_id,
-            'judul' => $judul,
-            'pesan' => $message,
-            'status' => 'belum_dibaca',
-        ]);
     }
 
     private function httpClient(): Client
