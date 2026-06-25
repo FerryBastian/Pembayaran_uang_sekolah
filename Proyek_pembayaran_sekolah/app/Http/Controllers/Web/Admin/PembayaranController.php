@@ -73,6 +73,12 @@ class PembayaranController extends Controller
             $this->paymentConfirmationMessage($pembayaran, 'Pembayaran Anda sudah diverifikasi dan tagihan dinyatakan lunas.')
         );
 
+        $notificationService->sendToUser(
+            $tagihanSiswa?->siswa?->user_id,
+            'Pembayaran Dikonfirmasi',
+            $this->paymentConfirmationMessage($pembayaran, 'Pembayaran untuk tagihan Anda sudah diverifikasi dan dinyatakan lunas.')
+        );
+
         if ($orangTua && filled($orangTua->no_wa)) {
             SendWhatsappPembayaranBerhasil::dispatch($orangTua, $tagihanSiswa);
         }
@@ -105,6 +111,12 @@ class PembayaranController extends Controller
 
         $notificationService->sendToUser(
             $pembayaran->tagihanSiswa?->siswa?->orangTua?->user_id,
+            'Bukti Pembayaran Ditolak',
+            $this->paymentConfirmationMessage($pembayaran, $pembayaran->catatan_verifikasi)
+        );
+
+        $notificationService->sendToUser(
+            $pembayaran->tagihanSiswa?->siswa?->user_id,
             'Bukti Pembayaran Ditolak',
             $this->paymentConfirmationMessage($pembayaran, $pembayaran->catatan_verifikasi)
         );

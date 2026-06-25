@@ -99,6 +99,16 @@ class TagihanController extends Controller
             )
         );
 
+        $notificationService->sendToUser(
+            $tagihanSiswa->siswa?->user_id,
+            'Bukti Pembayaran Diupload',
+            sprintf(
+                'Bukti pembayaran untuk tagihan %s sebesar Rp %s sudah diupload dan sedang menunggu verifikasi admin.',
+                $tagihanSiswa->tagihan?->judul ?? '-',
+                number_format($grossAmount, 0, ',', '.')
+            )
+        );
+
         return redirect()
             ->route('orang-tua.tagihan.index')
             ->with('success', 'Bukti pembayaran berhasil diupload. Status tagihan menunggu verifikasi admin.');
