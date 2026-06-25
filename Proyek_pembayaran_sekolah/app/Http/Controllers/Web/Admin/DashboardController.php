@@ -16,7 +16,7 @@ class DashboardController extends Controller
     public function index()
     {
         $now = now();
-        $successfulStatuses = ['settlement', 'capture', 'success'];
+        $successfulStatuses = ['lunas'];
 
         $totalSiswa = Siswa::count();
         $totalGuru = Guru::count();

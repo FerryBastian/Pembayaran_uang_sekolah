@@ -171,7 +171,7 @@
                         <span aria-hidden="true">&rarr;</span>
                     </a>
                     <a href="{{ route('admin.laporan.export-pdf') }}" class="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-secondary transition hover:border-primary hover:bg-blue-50 hover:text-primary">
-                        Export Laporan
+                        Download Laporan
                         <span aria-hidden="true">&rarr;</span>
                     </a>
                 </div>
@@ -212,9 +212,7 @@
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3">{{ $pembayaran->payment_type ?? '-' }}</td>
                                     <td class="whitespace-nowrap px-4 py-3">
-                                        <x-badge :status="$pembayaran->tagihanSiswa?->status ?? $pembayaran->transaction_status">
-                                            {{ str($pembayaran->transaction_status)->replace('_', ' ')->title() }}
-                                        </x-badge>
+                                        <x-badge :status="$pembayaran->tagihanSiswa?->status ?? $pembayaran->transaction_status" />
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3">
                                         {{ ($pembayaran->transaction_time ?? $pembayaran->created_at)?->format('d/m/Y H:i') }}

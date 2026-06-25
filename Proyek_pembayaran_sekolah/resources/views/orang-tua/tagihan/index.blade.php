@@ -29,7 +29,7 @@
                 <select name="status" class="rounded-xl border-slate-300 text-sm shadow-sm focus:border-primary focus:ring-primary" x-on:change="$refs.filterForm.submit()">
                     <option value="">Semua status</option>
                     <option value="belum_bayar" @selected(request('status') === 'belum_bayar')>Belum Bayar</option>
-                    <option value="pending" @selected(request('status') === 'pending')>Pending</option>
+                    <option value="pending" @selected(request('status') === 'pending')>Menunggu Verifikasi</option>
                     <option value="lunas" @selected(request('status') === 'lunas')>Lunas</option>
                 </select>
 
@@ -72,6 +72,8 @@
                                     <td class="px-4 py-3 text-right">
                                         @if ($row->status === 'lunas')
                                             <span class="text-sm font-semibold text-success">Selesai</span>
+                                        @elseif ($row->status === 'pending')
+                                            <a href="{{ route('orang-tua.tagihan.bayar', $row) }}" class="font-semibold text-warning hover:text-amber-700">Ganti Bukti</a>
                                         @else
                                             <a href="{{ route('orang-tua.tagihan.bayar', $row) }}" class="font-semibold text-primary hover:text-blue-800">Bayar Sekarang</a>
                                         @endif

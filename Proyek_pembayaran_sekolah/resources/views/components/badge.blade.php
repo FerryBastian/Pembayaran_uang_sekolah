@@ -24,6 +24,8 @@
 
     $labels = [
         'belum_bayar' => 'Belum Bayar',
+        'pending' => 'Menunggu Verifikasi',
+        'gagal' => 'Ditolak',
         'sudah_dibaca' => 'Sudah Dibaca',
         'belum_dibaca' => 'Belum Dibaca',
         'orang_tua' => 'Orang Tua',

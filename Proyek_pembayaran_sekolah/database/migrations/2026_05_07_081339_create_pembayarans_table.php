@@ -18,7 +18,10 @@ return new class extends Migration {
             $table->string('payment_type', 50)->nullable();
             $table->string('transaction_status', 50)->default('pending');
             $table->datetime('transaction_time')->nullable();
-            $table->text('snap_token');
+            $table->string('bukti_pembayaran')->nullable();
+            $table->text('catatan_verifikasi')->nullable();
+            $table->foreignId('verified_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('verified_at')->nullable();
             $table->timestamps();
         });
     }

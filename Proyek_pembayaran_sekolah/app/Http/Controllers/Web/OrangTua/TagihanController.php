@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\ResolvesParentProfile;
 use App\Models\Pembayaran;
 use App\Models\TagihanSiswa;
-use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Midtrans\Config;
-use Midtrans\Snap;
 
 class TagihanController extends Controller
 {
@@ -41,83 +39,54 @@ class TagihanController extends Controller
 
         return view('orang-tua.tagihan.bayar', [
             'tagihanSiswa' => $tagihanSiswa,
-            'midtransClientKey' => config('services.midtrans.client_key'),
-            'isProduction' => (bool) config('services.midtrans.is_production'),
+            'bankTransfer' => config('services.bank_transfer'),
         ]);
     }
 
-    public function snapToken(Request $request, TagihanSiswa $tagihanSiswa)
+    public function uploadBukti(Request $request, TagihanSiswa $tagihanSiswa)
     {
         $this->authorizeParentAccess($request, $tagihanSiswa);
         $tagihanSiswa->load(['tagihan', 'siswa', 'pembayaran']);
 
         if ($tagihanSiswa->status === 'lunas') {
-            return response()->json(['message' => 'Tagihan ini sudah lunas.'], 422);
+            return back()->with('error', 'Tagihan ini sudah lunas.');
         }
 
-        if (!config('services.midtrans.server_key') || !config('services.midtrans.client_key')) {
-            return response()->json(['message' => 'Konfigurasi Midtrans belum lengkap. Isi MIDTRANS_SERVER_KEY dan MIDTRANS_CLIENT_KEY di .env.'], 422);
-        }
+        $validated = $request->validate([
+            'bukti_pembayaran' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:4096'],
+        ]);
 
         $pembayaran = $tagihanSiswa->pembayaran;
-
-        if ($pembayaran?->snap_token) {
-            return response()->json([
-                'snap_token' => $pembayaran->snap_token,
-                'message' => 'Token pembayaran tersedia.',
-            ]);
-        }
-
-        $orderId = $pembayaran?->order_id ?: 'SPP-' . $tagihanSiswa->id . '-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(5));
+        $orderId = $pembayaran?->order_id ?: 'TRF-' . $tagihanSiswa->id . '-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(5));
         $grossAmount = (int) round((float) $tagihanSiswa->tagihan->nominal);
 
-        try {
-            Config::$serverKey = config('services.midtrans.server_key');
-            Config::$isProduction = (bool) config('services.midtrans.is_production');
-            Config::$isSanitized = (bool) config('services.midtrans.is_sanitized');
-            Config::$is3ds = (bool) config('services.midtrans.is_3ds');
-
-            $snapToken = Snap::getSnapToken([
-                'transaction_details' => [
-                    'order_id' => $orderId,
-                    'gross_amount' => $grossAmount,
-                ],
-                'customer_details' => [
-                    'first_name' => $request->user()->name,
-                    'email' => $request->user()->email,
-                ],
-                'item_details' => [
-                    [
-                        'id' => 'TAGIHAN-' . $tagihanSiswa->tagihan->id,
-                        'price' => $grossAmount,
-                        'quantity' => 1,
-                        'name' => Str::limit($tagihanSiswa->tagihan->judul, 45, ''),
-                    ],
-                ],
-            ]);
-        } catch (Exception $exception) {
-            return response()->json([
-                'message' => 'Gagal membuat token pembayaran: ' . $exception->getMessage(),
-            ], 422);
+        if ($pembayaran?->bukti_pembayaran) {
+            Storage::disk('local')->delete($pembayaran->bukti_pembayaran);
+            Storage::disk('public')->delete($pembayaran->bukti_pembayaran);
         }
 
-        $pembayaran = Pembayaran::updateOrCreate(
+        $path = $validated['bukti_pembayaran']->store('bukti-pembayaran');
+
+        Pembayaran::updateOrCreate(
             ['tagihan_siswa_id' => $tagihanSiswa->id],
             [
                 'order_id' => $orderId,
                 'gross_amount' => $grossAmount,
-                'payment_type' => 'midtrans_snap',
+                'payment_type' => 'transfer_bank',
                 'transaction_status' => 'pending',
-                'snap_token' => $snapToken,
+                'transaction_time' => now(),
+                'bukti_pembayaran' => $path,
+                'catatan_verifikasi' => null,
+                'verified_by' => null,
+                'verified_at' => null,
             ]
         );
 
         $tagihanSiswa->update(['status' => 'pending']);
 
-        return response()->json([
-            'snap_token' => $pembayaran->snap_token,
-            'message' => 'Token pembayaran berhasil dibuat.',
-        ]);
+        return redirect()
+            ->route('orang-tua.tagihan.index')
+            ->with('success', 'Bukti pembayaran berhasil diupload. Status tagihan menunggu verifikasi admin.');
     }
 
     private function authorizeParentAccess(Request $request, TagihanSiswa $tagihanSiswa): void

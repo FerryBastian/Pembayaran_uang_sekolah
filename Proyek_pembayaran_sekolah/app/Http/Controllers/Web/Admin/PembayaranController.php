@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendWhatsappPembayaranBerhasil;
 use App\Models\Pembayaran;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PembayaranController extends Controller
 {
@@ -35,5 +37,73 @@ class PembayaranController extends Controller
             ->pluck('transaction_status');
 
         return view('admin.pembayaran.index', compact('pembayarans', 'statusOptions'));
+    }
+
+    public function bukti(Pembayaran $pembayaran)
+    {
+        abort_unless($pembayaran->bukti_pembayaran, 404);
+
+        return $this->streamBuktiPembayaran($pembayaran);
+    }
+
+    public function verify(Request $request, Pembayaran $pembayaran)
+    {
+        $pembayaran->load('tagihanSiswa.siswa.orangTua');
+
+        if ($pembayaran->transaction_status === 'lunas') {
+            return back()->with('success', 'Pembayaran sudah berstatus lunas.');
+        }
+
+        $pembayaran->update([
+            'transaction_status' => 'lunas',
+            'catatan_verifikasi' => null,
+            'verified_by' => $request->user()->id,
+            'verified_at' => now(),
+        ]);
+
+        $tagihanSiswa = $pembayaran->tagihanSiswa;
+        $tagihanSiswa?->update(['status' => 'lunas']);
+
+        $orangTua = $tagihanSiswa?->siswa?->orangTua;
+
+        if ($orangTua && filled($orangTua->no_wa)) {
+            SendWhatsappPembayaranBerhasil::dispatch($orangTua, $tagihanSiswa);
+        }
+
+        return back()->with('success', 'Pembayaran berhasil ditandai lunas.');
+    }
+
+    public function reject(Request $request, Pembayaran $pembayaran)
+    {
+        $validated = $request->validate([
+            'catatan_verifikasi' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $pembayaran->load('tagihanSiswa');
+
+        if ($pembayaran->transaction_status === 'lunas') {
+            return back()->with('error', 'Pembayaran yang sudah lunas tidak bisa ditolak.');
+        }
+
+        $pembayaran->update([
+            'transaction_status' => 'gagal',
+            'catatan_verifikasi' => $validated['catatan_verifikasi'] ?: 'Bukti pembayaran ditolak admin.',
+            'verified_by' => $request->user()->id,
+            'verified_at' => now(),
+        ]);
+
+        $pembayaran->tagihanSiswa?->update(['status' => 'belum_bayar']);
+
+        return back()->with('success', 'Pembayaran ditolak. Orang tua dapat upload bukti pembayaran ulang.');
+    }
+
+    private function streamBuktiPembayaran(Pembayaran $pembayaran)
+    {
+        $path = $pembayaran->bukti_pembayaran;
+        $disk = Storage::disk('local')->exists($path) ? 'local' : 'public';
+
+        abort_unless(Storage::disk($disk)->exists($path), 404);
+
+        return response()->file(Storage::disk($disk)->path($path));
     }
 }

@@ -8,7 +8,20 @@
 @endsection
 
 @section('content')
-    <x-card title="Semua Riwayat Pembayaran" subtitle="Pantau seluruh transaksi pembayaran siswa.">
+    <div class="space-y-6">
+        @if (session('success'))
+            <x-alert type="success" title="Berhasil">{{ session('success') }}</x-alert>
+        @endif
+
+        @if (session('error'))
+            <x-alert type="error" title="Gagal">{{ session('error') }}</x-alert>
+        @endif
+
+        @if ($errors->any())
+            <x-alert type="error" title="Validasi gagal">{{ $errors->first() }}</x-alert>
+        @endif
+
+    <x-card title="Semua Riwayat Pembayaran" subtitle="Pantau bukti transfer dan verifikasi pembayaran siswa.">
         <form method="GET" action="{{ route('admin.pembayaran.index') }}" x-ref="filterForm" x-data class="mb-4 grid gap-3 lg:grid-cols-[1fr_14rem_auto]">
             <input
                 name="search"
@@ -40,8 +53,10 @@
                             <th class="px-4 py-3">Tagihan</th>
                             <th class="px-4 py-3">Nominal</th>
                             <th class="px-4 py-3">Metode</th>
+                            <th class="px-4 py-3">Bukti</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3">Tanggal</th>
+                            <th class="px-4 py-3 text-right">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white">
@@ -54,14 +69,52 @@
                                 </td>
                                 <td class="px-4 py-3">{{ $pembayaran->tagihanSiswa?->tagihan?->judul ?? '-' }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 font-semibold text-secondary">Rp {{ number_format($pembayaran->gross_amount, 0, ',', '.') }}</td>
-                                <td class="whitespace-nowrap px-4 py-3">{{ $pembayaran->payment_type ?: '-' }}</td>
+                                <td class="whitespace-nowrap px-4 py-3">{{ $pembayaran->payment_type ? str($pembayaran->payment_type)->replace('_', ' ')->title() : '-' }}</td>
                                 <td class="whitespace-nowrap px-4 py-3">
-                                    <x-badge :status="$pembayaran->tagihanSiswa?->status ?? $pembayaran->transaction_status">
-                                        {{ str($pembayaran->transaction_status)->replace('_', ' ')->title() }}
-                                    </x-badge>
+                                    @if ($pembayaran->bukti_pembayaran)
+                                        <a href="{{ route('admin.pembayaran.bukti', $pembayaran) }}" target="_blank" class="font-semibold text-primary hover:text-blue-800">
+                                            Lihat Bukti
+                                        </a>
+                                    @else
+                                        <span class="text-slate-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3">
+                                    <x-badge :status="$pembayaran->tagihanSiswa?->status ?? $pembayaran->transaction_status" />
+                                    @if ($pembayaran->catatan_verifikasi)
+                                        <p class="mt-1 max-w-56 whitespace-normal text-xs text-slate-500">{{ $pembayaran->catatan_verifikasi }}</p>
+                                    @endif
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-3">
                                     {{ ($pembayaran->transaction_time ?? $pembayaran->created_at)?->format('d/m/Y H:i') }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if ($pembayaran->transaction_status === 'pending')
+                                        <div class="flex min-w-72 flex-col items-end gap-2">
+                                            <form method="POST" action="{{ route('admin.pembayaran.verify', $pembayaran) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-success px-3 py-2 text-xs font-bold text-white hover:bg-green-700">
+                                                    Tandai Lunas
+                                                </button>
+                                            </form>
+
+                                            <form method="POST" action="{{ route('admin.pembayaran.reject', $pembayaran) }}" class="flex w-full items-center justify-end gap-2">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input
+                                                    name="catatan_verifikasi"
+                                                    class="w-44 rounded-xl border-slate-300 text-xs shadow-sm focus:border-primary focus:ring-primary"
+                                                    placeholder="Catatan penolakan"
+                                                >
+                                                <button type="submit" class="inline-flex items-center justify-center rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-danger hover:bg-red-50">
+                                                    Tolak
+                                                </button>
+                                            </form>
+                                        </div>
+                                    @else
+                                        <span class="text-sm text-slate-400">-</span>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -72,4 +125,5 @@
             <div class="mt-4">{{ $pembayarans->links() }}</div>
         @endif
     </x-card>
+    </div>
 @endsection

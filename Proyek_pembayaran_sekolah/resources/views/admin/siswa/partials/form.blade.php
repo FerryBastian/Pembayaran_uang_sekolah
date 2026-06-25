@@ -5,6 +5,29 @@
     $value = fn (string $key, mixed $fallback = '') => $useOld ? old($key) : $fallback;
 @endphp
 
+<div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div class="flex items-center gap-4 p-4 sm:gap-5 sm:p-5">
+        <div class="flex shrink-0 items-center justify-center rounded-lg border-4 border-orange-500 bg-white p-1">
+            <img src="{{ asset('images/logo.jpeg') }}" alt="Logo SMK GKPI 1" class="h-20 w-20 object-contain sm:h-24 sm:w-24">
+        </div>
+
+        <div class="min-w-0 flex-1 text-center font-serif text-[#073c87]">
+            <p class="text-[10px] font-bold uppercase leading-tight sm:text-xs">Yayasan Pendidikan Terang Hidup</p>
+            <p class="mt-1 text-xl font-black uppercase leading-none sm:text-3xl">Yayasan Pendidikan Terang Hidup</p>
+            <p class="mt-1 text-sm font-black uppercase leading-tight sm:text-xl">Sekolah Menengah Kejuruan (SMK) Swasta GKPI 1</p>
+            <p class="text-sm font-black uppercase leading-tight sm:text-xl">Kelompok Teknologi Rekayasa/TIK dan Kesehatan</p>
+            <p class="mt-2 text-[10px] font-bold leading-tight sm:text-xs">
+                Jurusan 1. Teknik Kendaraan Ringan 2. Teknik Distribusi Tenaga Listrik 3. Teknik Sepeda Motor 4. Teknik Komputer Jaringan 5. Keperawatan
+            </p>
+            <div class="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px] font-bold leading-tight sm:text-xs">
+                <span>Jl. D. I Panjaitan No. 47 NH Pematangsiantar</span>
+                <span>Email : smkgkpi@gmail.com</span>
+                <span>Website : www.smkgkpisiantar.sch.id</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="grid gap-5 sm:grid-cols-2">
     <div>
         <label for="nisn_{{ $currentForm }}" class="block text-sm font-semibold text-secondary">NISN</label>

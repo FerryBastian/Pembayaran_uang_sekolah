@@ -48,6 +48,9 @@ Route::middleware(['auth.web', 'role:admin'])
         Route::get('/wa/test', [\App\Http\Controllers\Web\Admin\TagihanController::class, 'testWhatsapp'])->name('wa.test');
 
         Route::get('/pembayaran', [\App\Http\Controllers\Web\Admin\PembayaranController::class, 'index'])->name('pembayaran.index');
+        Route::get('/pembayaran/{pembayaran}/bukti', [\App\Http\Controllers\Web\Admin\PembayaranController::class, 'bukti'])->name('pembayaran.bukti');
+        Route::patch('/pembayaran/{pembayaran}/verify', [\App\Http\Controllers\Web\Admin\PembayaranController::class, 'verify'])->name('pembayaran.verify');
+        Route::patch('/pembayaran/{pembayaran}/reject', [\App\Http\Controllers\Web\Admin\PembayaranController::class, 'reject'])->name('pembayaran.reject');
 
         Route::get('/laporan', [\App\Http\Controllers\Web\Admin\LaporanController::class, 'index'])->name('laporan.index');
         Route::get('/laporan/export-pdf', [\App\Http\Controllers\Web\Admin\LaporanController::class, 'exportPdf'])->name('laporan.export-pdf');
@@ -89,8 +92,9 @@ Route::middleware(['auth.web', 'role:orang_tua'])
         Route::get('/dashboard', [\App\Http\Controllers\Web\OrangTua\DashboardController::class, 'index'])->name('dashboard');
         Route::get('/tagihan', [\App\Http\Controllers\Web\OrangTua\TagihanController::class, 'index'])->name('tagihan.index');
         Route::get('/tagihan/{tagihanSiswa}/bayar', [\App\Http\Controllers\Web\OrangTua\TagihanController::class, 'bayar'])->name('tagihan.bayar');
-        Route::post('/tagihan/{tagihanSiswa}/snap-token', [\App\Http\Controllers\Web\OrangTua\TagihanController::class, 'snapToken'])->name('tagihan.snap-token');
+        Route::post('/tagihan/{tagihanSiswa}/upload-bukti', [\App\Http\Controllers\Web\OrangTua\TagihanController::class, 'uploadBukti'])->name('tagihan.upload-bukti');
         Route::get('/pembayaran', [\App\Http\Controllers\Web\OrangTua\PembayaranController::class, 'index'])->name('pembayaran.index');
+        Route::get('/pembayaran/{pembayaran}/bukti', [\App\Http\Controllers\Web\OrangTua\PembayaranController::class, 'bukti'])->name('pembayaran.bukti');
 
         Route::get('/notifikasi', [\App\Http\Controllers\Web\OrangTua\NotifikasiController::class, 'index'])->name('notifikasi.index');
         Route::get('/notifikasi/count', [\App\Http\Controllers\Web\OrangTua\NotifikasiController::class, 'count'])->name('notifikasi.count');

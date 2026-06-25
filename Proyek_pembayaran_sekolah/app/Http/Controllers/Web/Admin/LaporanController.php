@@ -28,21 +28,16 @@ class LaporanController extends Controller
 
     public function exportPdf(Request $request)
     {
-        $filters = $this->filters($request);
-        $rows = $this->baseQuery($filters)->get();
-        $summary = $this->summary($filters);
-
-        $pdf = Pdf::loadView('admin.laporan.pdf', [
-            'rows' => $rows,
-            'summary' => $summary,
-            'filters' => $filters,
-            'months' => $this->months(),
-            'generatedAt' => now(),
-        ])->setPaper('a4', 'landscape');
-
         $filename = 'laporan-pembayaran-' . now()->format('Ymd-His') . '.pdf';
 
-        return $pdf->download($filename);
+        return $this->makePdf($request)->stream($filename);
+    }
+
+    private function makePdf(Request $request)
+    {
+        return Pdf::loadView('admin.laporan.pdf', [
+            ...$this->reportData($request),
+        ])->setPaper('a4', 'landscape');
     }
 
     private function baseQuery(array $filters)
@@ -81,6 +76,21 @@ class LaporanController extends Controller
             'tahun' => $request->input('tahun', now()->year),
             'kelas_id' => $request->input('kelas_id'),
             'status' => $request->input('status'),
+        ];
+    }
+
+    private function reportData(Request $request): array
+    {
+        $filters = $this->filters($request);
+
+        return [
+            'rows' => $this->baseQuery($filters)->get(),
+            'summary' => $this->summary($filters),
+            'filters' => $filters,
+            'selectedKelas' => $filters['kelas_id'] ? Kelas::find($filters['kelas_id']) : null,
+            'months' => $this->months(),
+            'generatedAt' => now(),
+            'printedBy' => $request->user(),
         ];
     }
 

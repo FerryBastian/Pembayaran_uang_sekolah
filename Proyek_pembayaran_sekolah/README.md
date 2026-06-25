@@ -1,6 +1,6 @@
 # Sistem Informasi Pembayaran Uang Sekolah
 
-Website manajemen pembayaran uang sekolah berbasis Laravel. Aplikasi ini memiliki backend API dan website monolith menggunakan Laravel Blade, Tailwind CSS, Alpine.js, Axios, Laravel Sanctum, dan Midtrans Snap untuk pembayaran.
+Website manajemen pembayaran uang sekolah berbasis Laravel. Aplikasi ini memiliki backend API dan website monolith menggunakan Laravel Blade, Tailwind CSS, Alpine.js, Axios, Laravel Sanctum, dan pembayaran transfer bank manual dengan upload bukti.
 
 ## Ringkasan Teknologi
 
@@ -10,7 +10,7 @@ Website manajemen pembayaran uang sekolah berbasis Laravel. Aplikasi ini memilik
 - Frontend: Laravel Blade, Tailwind CSS 4, Alpine.js, Axios, Vite
 - Auth web: session-based guard Laravel
 - Auth API: Laravel Sanctum token
-- Payment gateway: Midtrans Snap
+- Pembayaran: transfer bank manual dan verifikasi admin
 - PDF export: barryvdh/laravel-dompdf
 
 ## Fitur Utama
@@ -53,7 +53,7 @@ Website manajemen pembayaran uang sekolah berbasis Laravel. Aplikasi ini memilik
 
 - Dashboard tagihan anak
 - Daftar tagihan anak dengan filter anak dan status
-- Halaman bayar tagihan menggunakan Midtrans Snap
+- Halaman bayar tagihan menggunakan transfer bank dan upload bukti pembayaran
 - Riwayat pembayaran anak
 - Notifikasi
 - Profil dan ganti password
@@ -201,11 +201,9 @@ SESSION_DRIVER=database
 QUEUE_CONNECTION=database
 CACHE_STORE=database
 
-MIDTRANS_SERVER_KEY=
-MIDTRANS_CLIENT_KEY=
-MIDTRANS_IS_PRODUCTION=false
-MIDTRANS_IS_SANITIZED=true
-MIDTRANS_IS_3DS=true
+PAYMENT_BANK_NAME="BANK BRI"
+PAYMENT_ACCOUNT_NUMBER=011301002289308
+PAYMENT_ACCOUNT_HOLDER="SMK 1 GKPI"
 
 GOWA_API_URL=http://127.0.0.1:3000
 GOWA_USERNAME=your_gowa_username
@@ -214,11 +212,11 @@ GOWA_DEVICE_ID=
 GOWA_TIMEOUT=15
 ```
 
-Untuk Midtrans sandbox:
+Konfigurasi rekening pembayaran:
 
-- Gunakan `MIDTRANS_IS_PRODUCTION=false`
-- Isi `MIDTRANS_SERVER_KEY` dari dashboard Midtrans sandbox
-- Isi `MIDTRANS_CLIENT_KEY` dari dashboard Midtrans sandbox
+- `PAYMENT_BANK_NAME` berisi nama bank tujuan transfer.
+- `PAYMENT_ACCOUNT_NUMBER` berisi nomor rekening tujuan transfer.
+- `PAYMENT_ACCOUNT_HOLDER` berisi nama pemilik rekening.
 
 Nilai `GOWA_USERNAME` dan `GOWA_PASSWORD` harus sama dengan salah satu akun pada
 `APP_BASIC_AUTH` di service GOWA. `GOWA_DEVICE_ID` boleh dikosongkan jika hanya
@@ -319,105 +317,25 @@ API berada di `routes/api.php` dan memakai Laravel Sanctum.
 - `POST /api/login`
 - `POST /api/logout`
 - `GET /api/me`
-- `POST /api/midtrans/callback` (public, tidak butuh token)
 - Resource API untuk kelas, guru, orang tua, siswa, dan tagihan
 
 API membutuhkan token Sanctum untuk route protected.
 
-## Alur Pembayaran Midtrans
+## Alur Pembayaran Transfer Manual
 
 1. Orang tua membuka `/orang-tua/tagihan`.
 2. Pilih tagihan yang belum lunas.
 3. Klik `Bayar Sekarang`.
-4. Halaman bayar memanggil endpoint:
+4. Orang tua transfer sesuai nominal ke rekening sekolah yang tampil di halaman bayar.
+5. Orang tua upload bukti pembayaran melalui endpoint:
 
 ```text
-POST /orang-tua/tagihan/{tagihanSiswa}/snap-token
+POST /orang-tua/tagihan/{tagihanSiswa}/upload-bukti
 ```
 
-5. Server membuat Snap token lewat Midtrans PHP SDK.
-6. Frontend memanggil `window.snap.pay(token)`.
-7. Status awal transaksi disimpan sebagai `pending`.
-8. Midtrans mengirim notifikasi callback ke `POST /api/midtrans/callback`.
-9. Laravel memperbarui status pembayaran menjadi `lunas`, `pending`, atau `gagal`.
-
-## Pengaturan ngrok (Untuk Development Lokal)
-
-Midtrans membutuhkan URL publik yang dapat diakses dari internet untuk mengirim notifikasi callback pembayaran. Karena server development berjalan di localhost, diperlukan ngrok untuk mengekspos server ke internet.
-
-### Prasyarat
-
-- Daftar akun gratis di [https://dashboard.ngrok.com/signup](https://dashboard.ngrok.com/signup)
-- Install ngrok
-
-```bash
-npm install -g ngrok
-```
-
-Atau download langsung dari [https://ngrok.com/download](https://ngrok.com/download).
-
-### Langkah Pengaturan
-
-1. Tambahkan authtoken ngrok. Ambil token dari [https://dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken).
-
-```bash
-ngrok config add-authtoken TOKEN_KAMU
-```
-
-2. Jalankan ngrok di terminal terpisah.
-
-```bash
-ngrok http 8000
-```
-
-3. Salin URL forwarding yang muncul, contoh:
-
-```text
-https://xxxx-xxxx.ngrok-free.app
-```
-
-4. Buka dashboard Midtrans sandbox di [https://dashboard.sandbox.midtrans.com/settings/payment/notification](https://dashboard.sandbox.midtrans.com/settings/payment/notification).
-
-5. Isi kolom **URL notifikasi pembayaran** dengan:
-
-```text
-https://xxxx-xxxx.ngrok-free.app/api/midtrans/callback
-```
-
-6. Klik **Simpan**.
-
-### Catatan Penting
-
-- URL ngrok **berubah setiap kali** ngrok dijalankan ulang (pada akun gratis). Perbarui URL di dashboard Midtrans setiap kali menjalankan ulang ngrok.
-- Jalankan tiga proses secara bersamaan saat development: `php artisan serve`, `npm run dev`, dan `ngrok http 8000`.
-- Untuk menghindari update URL manual, pertimbangkan upgrade ke ngrok berbayar yang mendukung domain tetap, atau gunakan Cloudflare Tunnel sebagai alternatif gratis.
-
-### Alternatif: Cloudflare Tunnel
-
-Cloudflare Tunnel memberikan URL yang lebih stabil tanpa perlu akun berbayar.
-
-```bash
-# Install cloudflared di Windows
-winget install --id Cloudflare.cloudflared
-
-# Jalankan tunnel
-cloudflared tunnel --url http://localhost:8000
-```
-
-Salin URL yang diberikan dan gunakan sebagai pengganti URL ngrok di dashboard Midtrans.
-
-### Kartu Test Midtrans Sandbox
-
-Untuk pengujian pembayaran yang langsung berstatus `settlement` (lunas), gunakan metode Credit Card dengan data berikut:
-
-| Field | Nilai |
-| --- | --- |
-| Card Number | `4811 1111 1111 1114` |
-| Expiry | `12/27` |
-| CVV | `123` |
-| OTP | `112233` |
-
-Metode QRIS dan Virtual Account di sandbox mungkin memerlukan trigger manual dari dashboard Midtrans untuk mengubah status menjadi `settlement`.
+6. Sistem menyimpan transaksi dengan status `pending`.
+7. Admin membuka `/admin/pembayaran`, memeriksa bukti transfer, lalu memilih `Tandai Lunas` atau `Tolak`.
+8. Jika disetujui, status tagihan menjadi `lunas`. Jika ditolak, status tagihan kembali menjadi `belum_bayar` dan orang tua dapat upload bukti ulang.
 
 ## Command Development
 
@@ -488,7 +406,7 @@ Relasi penting:
 - Dashboard dan halaman tiap role dilindungi middleware `auth.web` dan `role`.
 - Badge notifikasi di header melakukan polling unread count setiap 30 detik.
 - File asset publik berada di `public/`, termasuk logo di `public/images/logo.jpeg`.
-- Untuk production, set `APP_DEBUG=false`, isi `APP_URL`, dan gunakan key Midtrans production.
+- Untuk production, set `APP_DEBUG=false` dan isi `APP_URL`. Bukti pembayaran disimpan di storage private dan hanya dibuka melalui route yang dilindungi login.
 
 ## Troubleshooting
 
@@ -496,15 +414,14 @@ Relasi penting:
 
 Pastikan user memiliki profil sesuai role. Seeder terbaru sudah membuat profil dasar. Untuk data lama, controller orang tua otomatis membuat profil minimal jika belum ada.
 
-### Midtrans gagal membuat pembayaran
+### Upload bukti pembayaran gagal
 
 Periksa:
 
-- `MIDTRANS_SERVER_KEY`
-- `MIDTRANS_CLIENT_KEY`
-- `MIDTRANS_IS_PRODUCTION`
+- file berformat JPG, PNG, atau PDF
+- ukuran file maksimal 4 MB
 - nominal tagihan harus lebih dari 0
-- koneksi internet server ke Midtrans
+- folder storage dapat ditulis aplikasi
 
 Setelah mengubah `.env`, jalankan:
 
@@ -512,24 +429,19 @@ Setelah mengubah `.env`, jalankan:
 php artisan optimize:clear
 ```
 
-### Status pembayaran tetap pending setelah bayar
+### Status pembayaran tetap menunggu verifikasi
 
 Pastikan:
 
-- ngrok sedang berjalan
-- URL notifikasi di dashboard Midtrans sudah diperbarui dengan URL ngrok terbaru
-- Route `POST /api/midtrans/callback` tidak terbungkus middleware auth
-- Laravel sedang berjalan dan dapat menerima request
+- admin sudah membuka halaman `/admin/pembayaran`
+- bukti transfer sudah sesuai nominal dan rekening tujuan
+- admin sudah menekan tombol `Tandai Lunas`
 
-Cek log untuk melihat apakah callback masuk:
+Cek log jika upload atau verifikasi gagal:
 
 ```powershell
 Get-Content storage/logs/laravel.log -Wait -Tail 20
 ```
-
-### ngrok URL berubah
-
-Setiap kali ngrok dijalankan ulang, URL berubah. Perbarui URL di dashboard Midtrans sandbox pada menu **Pengaturan > Payment > URL notifikasi**.
 
 ### Asset tidak berubah
 
@@ -560,7 +472,7 @@ Gunakan `.env.production.example` sebagai acuan dan jangan deploy file `.env`
 lokal. Nilai berikut wajib diganti:
 
 - `APP_URL`, `APP_KEY`, dan koneksi database
-- key Midtrans production
+- konfigurasi rekening pembayaran sekolah
 - akun Basic Auth GOWA yang kuat
 - `GOWA_API_URL` yang dapat dijangkau server Laravel
 
@@ -597,11 +509,6 @@ manager hosting:
 php artisan queue:work --tries=3 --timeout=60 --sleep=3
 ```
 
-Atur URL notifikasi Midtrans production ke:
-
-```text
-https://your-domain.example/api/midtrans/callback
-```
-
-Callback memverifikasi `signature_key`, nominal transaksi, dan mencegah status
-`lunas` diturunkan oleh callback terlambat.
+File bukti pembayaran tersimpan di storage private, sedangkan database hanya
+menyimpan path file. Admin dan orang tua membuka bukti melalui route aplikasi
+yang sudah melewati autentikasi.

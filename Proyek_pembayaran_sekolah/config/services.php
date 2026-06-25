@@ -35,12 +35,10 @@ return [
         ],
     ],
 
-    'midtrans' => [
-        'server_key' => env('MIDTRANS_SERVER_KEY'),
-        'client_key' => env('MIDTRANS_CLIENT_KEY'),
-        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
-        'is_sanitized' => env('MIDTRANS_IS_SANITIZED', true),
-        'is_3ds' => env('MIDTRANS_IS_3DS', true),
+    'bank_transfer' => [
+        'bank_name' => env('PAYMENT_BANK_NAME', 'BANK BRI'),
+        'account_number' => env('PAYMENT_ACCOUNT_NUMBER', '011301002289308'),
+        'account_holder' => env('PAYMENT_ACCOUNT_HOLDER', 'SMK 1 GKPI'),
     ],
 
 ];

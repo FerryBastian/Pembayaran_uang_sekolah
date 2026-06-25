@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\ResolvesParentProfile;
 use App\Models\Pembayaran;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PembayaranController extends Controller
 {   
@@ -65,5 +66,24 @@ class PembayaranController extends Controller
             'totalPembayaran',
             'jumlahTransaksi'
         ));
+    }
+
+    public function bukti(Request $request, Pembayaran $pembayaran)
+    {
+        $orangTua = $this->resolveParentProfile($request->user());
+
+        abort_unless(
+            $orangTua->siswas()->whereKey($pembayaran->tagihanSiswa?->siswa_id)->exists(),
+            403
+        );
+
+        abort_unless($pembayaran->bukti_pembayaran, 404);
+
+        $path = $pembayaran->bukti_pembayaran;
+        $disk = Storage::disk('local')->exists($path) ? 'local' : 'public';
+
+        abort_unless(Storage::disk($disk)->exists($path), 404);
+
+        return response()->file(Storage::disk($disk)->path($path));
     }
 }

@@ -38,7 +38,7 @@
             </form>
             <div class="mt-3 flex justify-end">
                 <a href="{{ route('admin.laporan.export-pdf', request()->query()) }}" class="inline-flex rounded-xl bg-danger px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700">
-                    Export PDF
+                    Download PDF
                 </a>
             </div>
         </x-card>

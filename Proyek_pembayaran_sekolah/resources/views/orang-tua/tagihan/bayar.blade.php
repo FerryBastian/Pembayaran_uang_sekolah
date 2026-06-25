@@ -8,30 +8,18 @@
 @endsection
 
 @section('content')
-    <div
-        class="space-y-6"
-        x-data="paymentPage({
-            snapUrl: '{{ route('orang-tua.tagihan.snap-token', $tagihanSiswa) }}',
-            redirectUrl: '{{ route('orang-tua.tagihan.index') }}'
-        })"
-    >
-        <template x-if="alert.message">
-            <div
-                class="rounded-xl border p-4 text-sm"
-                :class="{
-                    'border-green-200 bg-green-50 text-green-800': alert.type === 'success',
-                    'border-amber-200 bg-amber-50 text-amber-800': alert.type === 'warning',
-                    'border-red-200 bg-red-50 text-red-800': alert.type === 'error'
-                }"
-            >
-                <p class="font-semibold" x-text="alert.title"></p>
-                <p class="mt-1" x-text="alert.message"></p>
-            </div>
-        </template>
+    <div class="space-y-6">
+        @if (session('success'))
+            <x-alert type="success" title="Berhasil">{{ session('success') }}</x-alert>
+        @endif
 
-        @if (!$midtransClientKey)
-            <x-alert type="warning" title="Konfigurasi Midtrans belum lengkap">
-                MIDTRANS_CLIENT_KEY belum diisi. Tombol pembayaran akan menampilkan error sampai konfigurasi Midtrans dilengkapi.
+        @if (session('error'))
+            <x-alert type="error" title="Gagal">{{ session('error') }}</x-alert>
+        @endif
+
+        @if ($errors->any())
+            <x-alert type="error" title="Upload gagal">
+                {{ $errors->first() }}
             </x-alert>
         @endif
 
@@ -71,31 +59,49 @@
                 </dl>
             </x-card>
 
-            <x-card title="Pembayaran Midtrans" subtitle="Lanjutkan pembayaran melalui Snap.">
-                <div class="space-y-4">
+            <x-card title="Transfer Bank" subtitle="Transfer sesuai nominal tagihan, lalu upload bukti pembayaran.">
+                <div class="space-y-5">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Nomor Rekening</p>
+                        <p class="mt-2 text-2xl font-bold text-secondary">{{ $bankTransfer['account_number'] }}</p>
+                        <p class="mt-1 font-semibold text-secondary">{{ $bankTransfer['bank_name'] }} - a.n {{ $bankTransfer['account_holder'] }}</p>
+                    </div>
+
+                    <div class="rounded-xl border border-slate-200 bg-white p-4">
+                        <p class="text-sm text-slate-500">Total pembayaran</p>
+                        <p class="mt-1 text-2xl font-bold text-secondary">Rp {{ number_format($tagihanSiswa->tagihan?->nominal ?? 0, 0, ',', '.') }}</p>
+                    </div>
+
                     @if ($tagihanSiswa->status === 'lunas')
                         <x-alert type="success" title="Tagihan sudah lunas" :dismissible="false">
                             Pembayaran untuk tagihan ini sudah selesai.
                         </x-alert>
                     @else
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                            <p class="text-sm text-slate-500">Total pembayaran</p>
-                            <p class="mt-1 text-2xl font-bold text-secondary">Rp {{ number_format($tagihanSiswa->tagihan?->nominal ?? 0, 0, ',', '.') }}</p>
-                        </div>
+                        @if ($tagihanSiswa->pembayaran?->bukti_pembayaran && $tagihanSiswa->status === 'pending')
+                            <x-alert type="warning" title="Menunggu verifikasi admin" :dismissible="false">
+                                Bukti pembayaran sudah diupload. Anda masih bisa mengganti bukti pembayaran selama admin belum menandai tagihan lunas.
+                            </x-alert>
+                        @endif
 
-                        <button
-                            type="button"
-                            class="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
-                            x-on:click="pay"
-                            x-bind:disabled="loading"
-                        >
-                            <span x-show="!loading">Bayar via Midtrans</span>
-                            <span x-show="loading">Menyiapkan pembayaran...</span>
-                        </button>
+                        <form method="POST" action="{{ route('orang-tua.tagihan.upload-bukti', $tagihanSiswa) }}" enctype="multipart/form-data" class="space-y-4">
+                            @csrf
+                            <div>
+                                <label for="bukti_pembayaran" class="block text-sm font-semibold text-secondary">Bukti Pembayaran</label>
+                                <input
+                                    id="bukti_pembayaran"
+                                    name="bukti_pembayaran"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.pdf"
+                                    required
+                                    class="mt-2 block w-full rounded-xl border border-slate-300 text-sm text-slate-700 file:mr-4 file:border-0 file:bg-primary file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-800"
+                                >
+                                <p class="mt-2 text-xs leading-5 text-slate-500">Format JPG, PNG, atau PDF. Maksimal 4 MB.</p>
+                            </div>
 
-                        <p class="text-xs leading-5 text-slate-500">
-                            Setelah popup Midtrans terbuka, selesaikan pembayaran sesuai metode yang dipilih. Status tagihan akan diperbarui setelah transaksi diproses.
-                        </p>
+                            <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-800">
+                                Upload Bukti Pembayaran
+                            </button>
+                        </form>
                     @endif
 
                     <a href="{{ route('orang-tua.tagihan.index') }}" class="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-blue-50">
@@ -105,56 +111,4 @@
             </x-card>
         </div>
     </div>
-
-    <script src="{{ $isProduction ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}" data-client-key="{{ $midtransClientKey }}"></script>
-    <script>
-        function paymentPage(config) {
-            return {
-                loading: false,
-                alert: {
-                    type: '',
-                    title: '',
-                    message: '',
-                },
-                setAlert(type, title, message) {
-                    this.alert = { type, title, message };
-                },
-                async pay() {
-                    this.loading = true;
-                    this.alert = { type: '', title: '', message: '' };
-
-                    try {
-                        const response = await window.axios.post(config.snapUrl);
-                        const token = response.data.snap_token;
-
-                        if (!window.snap) {
-                            this.setAlert('error', 'Snap belum siap', 'Script Midtrans Snap belum berhasil dimuat.');
-                            return;
-                        }
-
-                        window.snap.pay(token, {
-                            onSuccess: () => {
-                                this.setAlert('success', 'Pembayaran berhasil', 'Transaksi berhasil diproses. Halaman akan dimuat ulang.');
-                                setTimeout(() => window.location.href = config.redirectUrl, 1200);
-                            },
-                            onPending: () => {
-                                this.setAlert('warning', 'Pembayaran pending', 'Transaksi menunggu penyelesaian pembayaran.');
-                                setTimeout(() => window.location.reload(), 1200);
-                            },
-                            onError: () => {
-                                this.setAlert('error', 'Pembayaran gagal', 'Terjadi kesalahan saat memproses pembayaran.');
-                            },
-                            onClose: () => {
-                                this.setAlert('warning', 'Pembayaran ditutup', 'Popup pembayaran ditutup sebelum transaksi selesai.');
-                            },
-                        });
-                    } catch (error) {
-                        this.setAlert('error', 'Gagal menyiapkan pembayaran', error.response?.data?.message || 'Terjadi kesalahan saat mengambil token pembayaran.');
-                    } finally {
-                        this.loading = false;
-                    }
-                },
-            };
-        }
-    </script>
 @endsection
