@@ -7,6 +7,10 @@
 
     <title>Login | Sistem Pembayaran Sekolah</title>
 
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/logo.jpeg') }}">
+    <link rel="shortcut icon" type="image/jpeg" href="{{ asset('images/logo.jpeg') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo.jpeg') }}">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
